@@ -87,11 +87,28 @@ class SpotPlayer{
       CURLOPT_FOLLOWLOCATION => false,
       CURLOPT_HTTPHEADER => ['$API: ' . config('spotplayer.api'), '$LEVEL: -1', 'content-type: application/json' ],
     ]);
-    if ($options) curl_setopt($c, CURLOPT_POSTFIELDS, json_encode($this->filter($options)));
-    $json = json_decode(curl_exec($c), true);
-    curl_close($c);
-    if (is_array($json) && ($ex = @$json['ex'])) throw new SpotPlayerReturnedException($ex['msg']);
-    return $json;
+
+      if ($options) {
+          curl_setopt($c, CURLOPT_POSTFIELDS, json_encode($this->filter($options)));
+      }
+
+      $json = json_decode(curl_exec($c), true);
+      curl_close($c);
+
+      // Check if the response contains the "ex" key
+      if (is_array($json) && array_key_exists('ex', $json)) {
+          // Return the structured response with message and status code
+          return [
+              'status' => $json['ex']['status'] ?? 500,
+              'message' => $json['ex']['msg'] ?? 'An unknown error occurred.',
+          ];
+      }
+
+      // Return the successful response
+      return [
+          'status' => 200,
+          'data' => $json,
+      ];
   }
 
   /**
